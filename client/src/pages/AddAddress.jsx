@@ -17,7 +17,7 @@ const InputField = ({ type, placeholder, name, handleChange, address })=>(
 
 const AddAddress = () => {
 
-    const {axios, user, navigate} = useAppContext();
+    const {axios, user, navigate, setShowUserLogin} = useAppContext();
 
     const [address, setAddress] = useState({
         firstName: '',
@@ -47,7 +47,8 @@ const AddAddress = () => {
     const onSubmitHandler = async (e)=>{
         e.preventDefault();
         try {
-            const {data} = await axios.post('/api/address/add', {address});
+            console.log('Submitting address:', address);
+        const {data} = await axios.post('/api/address/add', {address});
 
             if (data.success){
                 toast.success(data.message)
@@ -62,9 +63,11 @@ const AddAddress = () => {
 
     useEffect(()=>{
         if(!user){
-            navigate('/cart')
+            toast.error("Please login to add an address");
+            setShowUserLogin(true)
+            navigate(-1)
         }
-    },[])
+    },[user])
 
   return (
     <div className='mt-16 pb-16'>
