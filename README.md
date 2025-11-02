@@ -213,6 +213,6 @@ Distributed under the MIT License. See `LICENSE` for more information. (Note: Yo
 
 ## 📧 Contact
 
- [your.email@example.com](shashankmishra00026@gmail.com)
+ [Email](shashankmishra00026@gmail.com)
 
 Project Link: [https://github.com/your-username/greencart](https://github.com/your-username/greencart)
