@@ -39,44 +39,86 @@ const Cart = () => {
     }
 
     const placeOrder = async ()=>{
-        try {
-            if(!selectedAddress){
-                return toast.error("Please select an address")
-            }
-
-            // Place Order with COD
-            if(paymentOption === "COD"){
-                const {data} = await axios.post('/api/order/cod', {
-                    userId: user._id,
-                    items: cartArray.map(item=> ({product: item._id, quantity: item.quantity})),
-                    address: selectedAddress._id
-                })
-
-                if(data.success){
-                    toast.success(data.message)
-                    setCartItems({})
-                    navigate('/my-orders')
-                }else{
-                    toast.error(data.message)
-                }
-            }else{
-                // Place Order with Stripe
-                const {data} = await axios.post('/api/order/stripe', {
-                    userId: user._id,
-                    items: cartArray.map(item=> ({product: item._id, quantity: item.quantity})),
-                    address: selectedAddress._id
-                })
-
-                if(data.success){
-                    window.location.replace(data.url)
-                }else{
-                    toast.error(data.message)
-                }
-            }
-        } catch (error) {
-            toast.error(error.message)
-        }
+  try {
+    if(!selectedAddress){
+      return toast.error("Please select an address")
     }
+
+    if(paymentOption === "COD"){
+      const {data} = await axios.post('/api/order/cod', {
+        userId: user._id,
+        items: cartArray.map(item=> ({product: item._id, quantity: item.quantity})),
+        address: selectedAddress._id
+      });
+
+      if(data.success){
+        toast.success(data.message);
+        setCartItems({});
+        navigate('/my-orders');
+      }else{
+        toast.error(data.message);
+      }
+    }else{
+      // 🔁 Razorpay flow (was Stripe earlier)
+      const { data } = await axios.post('/api/order/razorpay', {
+        userId: user._id,
+        items: cartArray.map(item => ({ product: item._id, quantity: item.quantity })),
+        address: selectedAddress._id
+      }, { withCredentials: true });
+
+      if (!data?.success) {
+        return toast.error(data?.message || "Failed to create order");
+      }
+
+      const { key, order, dbOrderId } = data;
+
+      const options = {
+        key: key || import.meta.env.VITE_RAZORPAY_KEY_ID, // publishable key
+        amount: order.amount,        // paise
+        currency: order.currency,    // "INR"
+        name: "GreenCart",
+        description: "Order Payment",
+        order_id: order.id,          // Razorpay order id
+        prefill: {
+          name: user?.name || "User",
+          email: user?.email || "test@example.com",
+          contact: "9999999999"
+        },
+        theme: { color: "#16a34a" },
+        handler: async function (response) {
+          // Verify signature on backend
+          try {
+            const verify = await axios.post('/api/order/razorpay/verify', {
+              ...response,
+              orderId: dbOrderId,
+              userId: user._id
+            }, { withCredentials: true });
+
+            if (verify.data?.success) {
+              toast.success("Payment successful");
+              setCartItems({});
+              navigate('/my-orders');
+            } else {
+              toast.error(verify.data?.message || "Verification failed");
+            }
+          } catch (e) {
+            toast.error(e.message);
+          }
+        },
+        modal: { confirm_close: true } // user closes modal → confirm prompt
+      };
+
+      if (!window.Razorpay) {
+        return toast.error("Payment SDK not loaded. Refresh the page.");
+      }
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    }
+  } catch (error) {
+    toast.error(error.message);
+  }
+};
 
     useEffect(()=>{
         if(products.length > 0 && cartItems){

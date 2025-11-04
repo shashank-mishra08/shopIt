@@ -1,5 +1,5 @@
 import cookieParser from 'cookie-parser';
-import express from 'express';
+import express, { application } from 'express';
 import cors from 'cors';
 import connectDB from './configs/db.js';
 import 'dotenv/config';
@@ -10,7 +10,9 @@ import productRouter from './routes/productRoute.js';
 import cartRouter from './routes/cartRoute.js';
 import addressRouter from './routes/addressRoute.js';
 import orderRouter from './routes/orderRoute.js';
-import { stripeWebhooks } from './controllers/orderController.js';
+import bodyParser from 'body-parser';
+import {razorpayWebhooks} from './controllers/orderController.js';
+//import { stripeWebhooks } from './controllers/orderController.js';
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -20,8 +22,13 @@ await connectCloudinary()
 
 // Allow multiple origins
 const allowedOrigins = ['http://localhost:5173', 'https://shop-it-phi.vercel.app']
+// app.post('/stripe', express.raw({type: 'application/json'}), stripeWebhooks)
+app.post(
+    "/razorpay",
+    bodyParser.raw({type: "application/json"}),
+    razorpayWebhooks,
 
-app.post('/stripe', express.raw({type: 'application/json'}), stripeWebhooks)
+);
 
 // Middleware configuration
 app.use(express.json());
